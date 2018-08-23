@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>PayMaya Wallet Tester</title>
+            
+
+    </head>
+    <body >
+        <h1>
+            PayMaya Wallet API Tester
+        </h1>
+        <div>
+            <h3>
+                Authentication
+            </h3>
+            <button type="button" onclick="authenticate()"> 
+                Authenticate
+            </button>
+            <button type="button" onclick="logout()"> 
+                Logout
+            </button>
+
+            <h3>
+                User Details Test
+            </h3>
+
+            <button type="button" onclick="getUserDetails()">
+                Get User details
+            </button>
+            
+            <button type="button" onclick="getUserBalance()">
+                Get User balance
+            </button>
+    
+            <button type="button" onclick="responseText.innerHTML = ''">
+                Clear
+            </button>
+
+            <h4>
+                Response
+            </h4>
+            <p id="responseText"></p>
+        </div>
+
+        <br>
+
+        <div>
+            <h3>
+                KYC Test
+            </h3>
+
+            <button type="button" onclick="getFields()">
+                Get Fields
+            </button>
+            <button type="button" onclick="uploadFile()">
+                Upload
+            </button>
+            <button type="button" onclick="submitApplication()">
+                Submit Mock Application
+            </button>
+            <button type="button" onclick="status()">
+                Status
+            </button>
+            <button type="button" onclick="kycResponse.innerHTML = ''">
+                Clear
+            </button>
+            <h4>
+                Response
+            </h4>
+            <p id="kycResponse"></p>
+        </div>
+
+        <br>
+
+        <div>
+            <h3>
+                Shop Test
+            </h3>
+
+            Product ID:<br>
+            (ID of the Product)<br>
+            <input type="text" id="itemID">
+            <br>
+            Purchase ID:<br> 
+            (A client Generated ID using the UUID v4 format)<br>
+            <input type="text" id="purchaseID">
+
+            <br>
+            <br>
+
+            <button type="button" onclick="buyItem()">
+                Purchase Item
+            </button>
+            <button type="button" onclick="getProductCatalog()">
+                Get Product List
+            </button>
+            <button type="button" onclick="shopList.innerHTML = ''">
+                Clear
+            </button>
+        
+            <h4>
+                Response
+            </h4>
+
+            <p id="shopList"></p>
+        </div>
+
+        <br>
+
+        <div>
+
+            <h3>
+                Billing test
+            </h3>
+
+            <label>This test makes a payment to the biller, "Laguna Water", using the slug, "LAGUNAWATER".</label>
+            <br>
+            <br>
+            <button type="button" onclick="payBill()">
+                Pay Bill
+            </button>
+
+            <button type="button" onclick="confirmPayment()">
+                Confirm Payment
+            </button>
+
+            <button type="button" onclick="getBillers()">
+                Get Billers
+            </button>
+
+            <button type="button" onclick="billerList.innerHTML = ''">
+                Clear
+            </button>
+
+            <h4>
+                Response
+            </h4>
+            <p id="billerList"></p>
+        </div>
+
+        <br>
+
+        <div>
+                <h3>
+                    Money Transfer Test
+                </h3>
+
+                Phone Number/Alias:<br>
+                <input align="right" type="text" id="alias">
+                <br>
+                Amount:<br>
+                <input align="right" type="text" id="amount">
+                <br>
+                Note:<br>
+                <input align="right" type="text" id="note">
+
+                <br>
+                <br>
+                
+                <button type="button" onclick="sendMoney()">
+                    Send Money
+                </button>
+                <button type="button" onclick="confirmTransfer()">
+                    Confirm Transfer
+                </button>
+                <button type="button" onclick="cancelTransfer()">
+                    Cancel Transfer
+                </button>
+                <button type="button" onclick="responseText.innerHTML = ''">
+                    Clear
+                </button>
+    
+                <h4>
+                    Response
+                </h4>
+                <p id="transferResponse"></p>
+            </div>
+
+        <script>
+                const responseTextBox = document.getElementById("responseText");
+                const shopList = document.getElementById("shopList");
+                const billerList = document.getElementById("billerList");
+                const transferResponse = document.getElementById("transferResponse");
+                const kycResponse = document.getElementById("kycResponse");
+
+                const shopInput = document.getElementById("itemID");
+                const billingInput = document.getElementById("billerID");
+
+                var transferID;
+                var paymentBillerID;
+
+                /**
+                 * Brings the user to the login page then returns him to the redirect_uri once
+                 * he is finished logging in.
+                 */
+                function authenticate(){
+                    window.location.href = "https://connect-sb-issuing.paymaya.com/authorize?client_id=ramon-test&response_type=code&redirect_uri=http://localhost/callback";
+                }
+
+                function logout(){
+                    window.location.href = "https://connect-sb-issuing.paymaya.com/logout";
+                }
+
+                /**
+                 * This function returns the response from the server in the form of a string..
+                 */
+                function makeRequest(requestType, link, body){
+                    var xhr = new XMLHttpRequest();
+                    xhr.open(requestType, link, false);
+                    if(body != null){
+                        xhr.setRequestHeader("Content-Type", "application/json");
+                    }
+                    xhr.send(JSON.stringify(body));
+                    var response = (xhr.responseText);
+
+                    if(response.error == null){
+                        return response;
+                    }else{
+                        return response.error;
+                    }
+                }
+
+                /**
+                 * Gets the details of a user.
+                 */
+                function getUserDetails(){
+                    responseTextBox.innerHTML = makeRequest('GET','http://localhost/user', null);
+                }
+
+                /**
+                 * Gets the balance details of a user.
+                 */
+                function getUserBalance(){
+                    responseTextBox.innerHTML = makeRequest('GET','http://localhost/balance', null);
+                }
+
+                /**
+                 * Initiates a money transfer to another PayMaya user.
+                 */
+                function sendMoney(){
+                    var alias = document.getElementById("alias").value;
+                    var amount = document.getElementById("amount").value;
+                    var note = document.getElementById("note").value;
+                    if(alias == '' || amount == ''){
+                        transferResponse.innerHTML = 'The Alias and Amount fields are required.'
+                        return;
+                    }
+                    var body = {
+                        "type": "transfer",
+                        "alias": alias,
+                        "amount": amount,
+                        "note":note
+                    }
+
+                    var response = JSON.parse(makeRequest('POST','http://localhost/transfer', body));
+
+                    transferID = response.transferId;       
+
+                    var responseText = 'PHP' + amount + ' has been sent to the Number/Alias ' + alias 
+                    + ' with the note: \n\n"' + note + '"';
+                    if(transferID == null){
+                        transferResponse.innerHTML = "An error has occurred completing request.\n\n" + response.error.description;
+                    }else{
+                        transferResponse.innerHTML = responseText;
+                    }
+                }
+
+                /**
+                 * Confirms an existing transfer based off its ID.
+                 */
+                function confirmTransfer(){
+                    if(transferID == null){
+                        transferResponse.innerHTML  = "No transfer request has been made."
+                        return;
+                    }
+                    var body = {
+                        "type": "transfer",
+                        "alias": transferID
+                    }
+                    transferResponse.innerHTML = makeRequest('PUT','http://localhost/confirm', body);
+                }
+                
+                /**
+                 * Cancels a transfer that has recently been confirmed.
+                 */
+                function cancelTransfer(){
+                    if(transferID == null){
+                        transferResponse.innerHTML  = "No transfer request has been made."
+                        return;
+                    }
+                    var body = {
+                        "alias": transferID
+                    }
+                    
+                    transferResponse.innerHTML = makeRequest('POST','http://localhost/cancel', body);
+                }
+
+                /**
+                 * Gets an entire product catalog.
+                 */
+                function getProductCatalog(){
+                    shopList.innerHTML = makeRequest('GET','http://localhost/productCatalog', null);
+                }
+
+                /**
+                 * Buys a specified item.
+                 */
+                function buyItem(){
+                    // Send the Item ID as part of the body object.
+                    var productID = document.getElementById("itemID").value;
+                    var purchaseID = document.getElementById("purchaseID").value;
+                    var body = {
+                        "productID": productID,
+                        "purchaseID": purchaseID
+                    }
+                    shopList.innerHTML = makeRequest('POST','http://localhost/purchase', body);
+                }
+
+                /**
+                 * Gets a list of all the billers.
+                 */
+                function getBillers(){
+                    billerList.innerHTML = makeRequest('GET','http://localhost/billers', null);
+                }
+
+                /**
+                 * Creates a P100 payment to a specified biller, which in this case is Laguna Water.
+                 * The Biller is hardcoded because each different biller has its own specification
+                 * to follow.
+                 */
+                function payBill(){
+                    // var billerID = document.getElementById("billerID").value;
+                    var body = {
+                        "billerID": "LAGUNAWATER"
+                    }
+                    var response = makeRequest('POST','http://localhost/payBill', body);
+                    paymentBillerID = JSON.parse(response).billPaymentId;
+                    billerList.innerHTML = response;
+                }
+
+                /**
+                 * Confirms an existing payment to a biller.
+                 */
+                function confirmPayment(){
+                    if(paymentBillerID == null){
+                        billerList.innerHTML  = "No Payment has been made to the specified Biller."
+                        return;
+                    }
+                    var body = {
+                        "type": "payment",
+                        "billerID":paymentBillerID
+                    }
+                    billerList.innerHTML = makeRequest('PUT', 'http://localhost/confirm', body);
+
+                }
+
+                /*
+                TODO: KYC SECTION
+                */
+
+                function getFields(){
+                    var request = makeRequest('GET', 'http://localhost/getFields', null);
+                    var responseObject =  JSON.parse(request);
+                    console.log(responseObject);
+                    kycResponse.innerHTML = request;
+                }
+
+                function uploadFile(){
+                    kycResponse.innerHTML = makeRequest('GET', 'http://localhost/uploadFile', null);
+                }
+
+                function submitApplication(){
+
+                    kycResponse.innerHTML = makeRequest('GET', 'http://localhost/submit', null);
+                }
+
+                function status(){
+                    kycResponse.innerHTML = makeRequest('GET', 'http://localhost/status', null);
+                }
+        </script>
+    </body>
+</html>
